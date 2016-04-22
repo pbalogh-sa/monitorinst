@@ -6,7 +6,7 @@
   vars_files:
     - 'env.yml'
   vars:
-    corpPath: '{{ lookup( "pipe", "pwd" ) | regex_replace( "^(.*)/ansible/.*", "\1/serverrepo" ) }}'
+    corpPath: '{{ lookup( "pipe", "pwd" ) | regex_replace( "^(.*)/ansible/.*", "\1/corppath" ) }}'
     nodeColoc: '{{ group_names[0] }}'
   tasks:
     - debug: var=ansible_nodename
@@ -14,7 +14,7 @@
     - debug: var=actinguser
     - debug: var=corpPath
 
-    - apt: update_cache=yes
+#    - apt: update_cache=yes
     - apt: name='{{ item }}' state=present
       with_items:
         - python-cairo
@@ -126,6 +126,10 @@
     - command: a2ensite graphite
     - service: name=apache2 state=restarted
 
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }} cvs add graphite
+      tags:
+        - cvscommit
+        - cvsadd
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/graphite find . -type d \! -name CVS -exec cvs add '{}' \;
       tags:
         - cvscommit
@@ -134,6 +138,8 @@
       tags:
         - cvscommit
         - cvsadd
+
+    - local_action: debug msg="{{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/graphite"
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/graphite cvs commit -m "initial commit"
       tags:
         - cvscommit
@@ -142,9 +148,12 @@
         - ./etc
         - ./etc/apache2
         - ./etc/apache2/sites-available
+        - ./etc/apache2/sites-available/graphite.conf
       tags:
         - cvscommit
         - cvsadd
+      ignore_errors: yes
+
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" ./etc/apache2/sites-available/graphite.conf
       tags:
         - cvscommit
@@ -157,11 +166,11 @@
         - app_settings.py
     - synchronize: src=/etc/apache2/sites-available/graphite.conf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/etc/apache2/sites-available/graphite.conf mode=pull
 
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/graphite cvs commit -m "initial commit"
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/graphite cvs commit -m "second commit"
       tags:
         - cvscommit
         - overwrite
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" ./etc/apache2/sites-available/graphite.conf
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "second commit" ./etc/apache2/sites-available/graphite.conf
       tags:
         - cvscommit
         - overwrite
@@ -225,32 +234,33 @@
 
     - synchronize: src=/home/{{ actinguser }}/shinken/etc/shinken dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/shinken/etc/ mode=pull
 
-    - replace: dest={{ item.path }} regexp='=/var/' replace='=/home/{{ actinguser }}/shinken/var/'
-      with_items: iniFiles.files
+    - replace: dest='{{ item.path }}' regexp='=/var/' replace='=/home/{{ actinguser }}/shinken/var/'
+      with_items: '{{ iniFiles.files }}'
       become: yes
 
-    - replace: dest={{ item.path }} regexp='= /var/' replace='= /home/{{ actinguser }}/shinken/var/'
-      with_items: iniFiles.files
+    - replace: dest='{{ item.path }}' regexp='= /var/' replace='= /home/{{ actinguser }}/shinken/var/'
+      with_items: '{{ iniFiles.files }}'
       become: yes
 
-    - replace: dest={{ item.path }} regexp='=/usr/' replace='=/home/{{ actinguser }}/shinken/usr/'
-      with_items: iniFiles.files
+    - replace: dest='{{ item.path }}' regexp='=/usr/' replace='=/home/{{ actinguser }}/shinken/usr/'
+      with_items: '{{ iniFiles.files }}'
       become: yes
 
-    - replace: dest={{ item.path }} regexp='=/etc/shinken/' replace='=/home/{{ actinguser }}/shinken/etc/shinken/'
-      with_items: iniFiles.files
+    - replace: dest='{{ item.path }}' regexp='=/etc/shinken/' replace='=/home/{{ actinguser }}/shinken/etc/shinken/'
+      with_items: '{{ iniFiles.files }}'
       become: yes
 
-    - replace: dest={{ item.path }} regexp='=shinken' replace='={{ actinguser }}' backup=yes
-      with_items: iniFiles.files
+    - replace: dest='{{ item.path }}' regexp='=shinken' replace='={{ actinguser }}' backup=yes
+      with_items: '{{ iniFiles.files }}'
       become: yes
 
-    - replace: dest={{ item.path }} regexp='port=77' replace='port={{ portbase }}'
-      with_items: iniFiles.files
+    - replace: dest='{{ item.path }}' regexp='port=77' replace='port={{ portbase }}'
+      with_items: '{{ iniFiles.files }}'
       become: yes
 
-    - replace: dest={{ item.path }} regexp='# *port=' replace='port='
-      with_items: iniFiles.files
+    - name: DDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+      replace: dest='{{ item.path }}' regexp='# *port=' replace='port='
+      with_items: '{{ iniFiles.files }}'
       become: yes
 
     - synchronize: src=/etc/default/shinken dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/etc/default/ mode=pull
@@ -261,11 +271,11 @@
     - replace: dest=/etc/default/shinken regexp='=shinken' replace='={{ actinguser }}'
 
     - lineinfile: dest={{ item.path }} regexp='user=' line='user={{ actinguser }}'
-      with_items: iniFiles.files
+      with_items: '{{ iniFiles.files }}'
       become: yes
 
     - lineinfile: dest={{ item.path }} regexp='group=' line='group={{ actinguser }}'
-      with_items: iniFiles.files
+      with_items: '{{ iniFiles.files }}'
       become: yes
 
     - find: path=/home/{{ actinguser }}/shinken/etc/shinken patterns=*.cfg recurse=yes
@@ -273,7 +283,7 @@
       become: yes
 
     - replace: dest={{ item.path }} regexp='port *77' replace='port {{ portbase }}'
-      with_items: cfgFiles.files
+      with_items: '{{ cfgFiles.files }}'
       become: yes
 
     - replace: dest=/home/{{ actinguser }}/shinken/etc/shinken/resource.d/paths.cfg regexp='=/usr/lib/' replace='=/home/{{ actinguser }}/shinken/usr/lib/'
@@ -285,7 +295,7 @@
     - replace: dest=/home/{{ actinguser }}/shinken/etc/shinken/shinken.cfg regexp='=/etc/' replace='=/home/{{ actinguser }}/shinken/etc/' backup=yes
       become: yes
     - replace: dest={{ item.path }} regexp='=shinken' replace='={{ actinguser }}'
-      with_items: cfgFiles.files
+      with_items: '{{ cfgFiles.files }}'
       become: yes
 
     - replace: dest=/home/{{ actinguser }}/shinken/etc/shinken/brokers/broker-master.cfg regexp='^([ \t]*modules[ \t]*)$' replace='\1 webui2,graphite,livestatus'
@@ -303,6 +313,10 @@
     - replace: dest=/home/{{ actinguser }}/shinken/etc/shinken/modules/ui-graphite.cfg regexp='templates_path[ \t]*/var/' replace='templates_path /home/{{ actinguser }}/shinken/var/'
       become: yes
 
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }} cvs add shinken
+      tags:
+        - cvscommit
+        - cvsadd
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/shinken find . -type d \! -name CVS -exec cvs add '{}' \;
       tags:
         - cvscommit
@@ -318,13 +332,11 @@
       with_items:
         - ./etc
         - ./etc/default/
+        - ./etc/default/shinken
       tags:
         - cvscommit
         - cvsadd
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs add ./etc/default/shinken
-      tags:
-        - cvscommit
-        - cvsadd
+      ignore_errors: yes
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" ./etc/default/shinken
       tags:
         - cvscommit
@@ -335,17 +347,19 @@
     - service: name=shinken state=started
       become: yes
 
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/shinken cvs commit -m "initial commit"
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/shinken cvs commit -m "second commit"
       tags:
         - cvscommit
         - overwrite
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" ./etc/default/shinken
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "second commit" ./etc/default/shinken
       tags:
         - cvscommit
         - overwrite
 
 # Thruk
 
+    - name: thruk install
+      debug: msg="Thruk install"
     - get_url: url={{ item }} dest=/home/{{ actinguser }}/
       with_items:   
         - http://download.thruk.org/pkg/v2.06/ubuntu14.04/amd64/thruk_2.06_ubuntu14.04_amd64.deb
@@ -393,6 +407,10 @@
     - synchronize: src=/etc/apache2/conf-available/thruk.conf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/etc/apache2/conf-available/thruk.conf mode=pull
     - replace: dest=/etc/apache2/conf-available/thruk.conf regexp='[ \t]+/etc/thruk' replace=' /home/{{ actinguser }}/thruk/etc/thruk'
 
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }} cvs add thruk
+      tags:
+        - cvscommit
+        - cvsadd
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/thruk find . -type d \! -name CVS -exec cvs add '{}' \;
       tags:
         - cvscommit
@@ -407,12 +425,14 @@
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs add {{ item }}
       with_items:
         - ./etc/thruk
+        - ./etc/apache2/conf-available
         - ./etc/apache2/conf-available/thruk.conf
         - ./etc/thruk/thruk.conf
         - ./etc/thruk/thruk_local.conf
       tags:
         - cvscommit
         - cvsadd
+      ignore_errors: yes
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" {{ item }}
       with_items:
         - ./etc/apache2/conf-available/thruk.conf
@@ -429,11 +449,11 @@
     - service: name=apache2 state=restarted
     - service: name=thruk state=restarted
 
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/thruk cvs commit -m "initial commit"
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/thruk cvs commit -m "second commit"
       tags:
         - cvscommit
         - overwrite
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" {{ item }}
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "isecond commit" {{ item }}
       with_items:
         - ./etc/apache2/conf-available/thruk.conf
         - ./etc/thruk/thruk.conf
@@ -469,6 +489,10 @@
     - template: src=grafana-server.template dest=/etc/default/grafana-server
     - lineinfile: dest=/home/{{ actinguser }}/grafana/etc/grafana.ini regexp='^;http_port = ' line='http_port = {{ portbase }}00'
 
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }} cvs add grafana
+      tags:
+        - cvscommit
+        - cvsadd
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/grafana find . -type d \! -name CVS -exec cvs add '{}' \;
       tags:
         - cvscommit
@@ -484,6 +508,7 @@
       tags:
         - cvscommit
         - cvsadd
+      ignore_errors: yes
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" ./etc/default/grafana-server
       tags:
         - cvscommit
@@ -493,11 +518,11 @@
 
     - service: name=grafana-server state=restarted
 
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/grafana cvs commit -m "initial commit"
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/grafana cvs commit -m "second commit"
       tags:
         - cvscommit
         - overwrite
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" ./etc/default/grafana-server
+    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "second commit" ./etc/default/grafana-server
       tags:
         - cvscommit
         - overwrite
