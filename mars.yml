@@ -6,7 +6,7 @@
   vars_files:
     - 'env.yml'
   vars:
-    corpPath: '{{ lookup( "pipe", "pwd" ) | regex_replace( "^(.*)/ansible/.*", "\1/corppath" ) }}'
+    corpPath: '{{ lookup( "pipe", "pwd" ) | regex_replace( "^(.*)/ansible/.*", "\1/hu/linuxsysadmin" ) }}'
     nodeColoc: '{{ group_names[0] }}'
   tasks:
     - debug: var=ansible_nodename
@@ -140,7 +140,9 @@
         - cvsadd
 
     - local_action: debug msg="{{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/graphite"
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/graphite cvs commit -m "initial commit"
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/graphite cvs commit -m "Ansible shinken/mars
+        Initial commit"
       tags:
         - cvscommit
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs add {{ item }}
@@ -154,7 +156,9 @@
         - cvsadd
       ignore_errors: yes
 
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" ./etc/apache2/sites-available/graphite.conf
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "Ansible shinken/mas
+        Initial commit" ./etc/apache2/sites-available/graphite.conf
       tags:
         - cvscommit
 
@@ -166,11 +170,15 @@
         - app_settings.py
     - synchronize: src=/etc/apache2/sites-available/graphite.conf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/etc/apache2/sites-available/graphite.conf mode=pull
 
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/graphite cvs commit -m "second commit"
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/graphite cvs commit -m "Ansible shinken/mars
+        Second commit"
       tags:
         - cvscommit
         - overwrite
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "second commit" ./etc/apache2/sites-available/graphite.conf
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "Ansible shinken/mars
+        Second commit" ./etc/apache2/sites-available/graphite.conf
       tags:
         - cvscommit
         - overwrite
@@ -258,8 +266,7 @@
       with_items: '{{ iniFiles.files }}'
       become: yes
 
-    - name: DDDDDDDDDDDDDDDDDDDDDDDDDDDDD
-      replace: dest='{{ item.path }}' regexp='# *port=' replace='port='
+    - replace: dest='{{ item.path }}' regexp='# *port=' replace='port='
       with_items: '{{ iniFiles.files }}'
       become: yes
 
@@ -325,7 +332,9 @@
       tags:
         - cvscommit
         - cvsadd
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/shinken cvs commit -m "initial commit"
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/shinken cvs commit -m "Ansible shinken/mars
+        Initial commit"
       tags:
         - cvscommit
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs add {{ item }}
@@ -337,7 +346,9 @@
         - cvscommit
         - cvsadd
       ignore_errors: yes
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" ./etc/default/shinken
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "Ansible shinken/mars
+        Initial commit" ./etc/default/shinken
       tags:
         - cvscommit
 
@@ -347,11 +358,15 @@
     - service: name=shinken state=started
       become: yes
 
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/shinken cvs commit -m "second commit"
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/shinken cvs commit -m "Ansible shinken/mars
+        Second commit"
       tags:
         - cvscommit
         - overwrite
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "second commit" ./etc/default/shinken
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "Ansible shinken/mars
+        Second commit" ./etc/default/shinken
       tags:
         - cvscommit
         - overwrite
@@ -419,7 +434,9 @@
       tags:
         - cvscommit
         - cvsadd
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/thruk cvs commit -m "initial commit"
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/thruk cvs commit -m "Ansible shinken/mars
+        Initial commit"
       tags:
         - cvscommit
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs add {{ item }}
@@ -433,7 +450,9 @@
         - cvscommit
         - cvsadd
       ignore_errors: yes
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" {{ item }}
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "Ansible shinken/mars
+        Initial commit" {{ item }}
       with_items:
         - ./etc/apache2/conf-available/thruk.conf
         - ./etc/thruk/thruk.conf
@@ -449,11 +468,15 @@
     - service: name=apache2 state=restarted
     - service: name=thruk state=restarted
 
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/thruk cvs commit -m "second commit"
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/thruk cvs commit -m "Ansible shinken/mars
+        Second commit"
       tags:
         - cvscommit
         - overwrite
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "isecond commit" {{ item }}
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "Ansible shinken/mars
+        second commit" {{ item }}
       with_items:
         - ./etc/apache2/conf-available/thruk.conf
         - ./etc/thruk/thruk.conf
@@ -501,7 +524,9 @@
       tags:
         - cvscommit
         - cvsadd
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/grafana cvs commit -m "initial commit"
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/grafana cvs commit -m "Ansible shinken/mars
+        Initial commit"
       tags:
         - cvscommit
     - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs add ./etc/default/grafana-server
@@ -509,7 +534,9 @@
         - cvscommit
         - cvsadd
       ignore_errors: yes
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "initial commit" ./etc/default/grafana-server
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "Ansible shinken/mars
+        Initial commit" ./etc/default/grafana-server
       tags:
         - cvscommit
 
@@ -518,11 +545,15 @@
 
     - service: name=grafana-server state=restarted
 
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/grafana cvs commit -m "second commit"
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/grafana cvs commit -m "Ansible shinken/mars
+        Second commit"
       tags:
         - cvscommit
         - overwrite
-    - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "second commit" ./etc/default/grafana-server
+    - local_action: |
+        shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "Ansible shinken/mars
+        Second commit" ./etc/default/grafana-server
       tags:
         - cvscommit
         - overwrite
