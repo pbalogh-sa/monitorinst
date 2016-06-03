@@ -6,7 +6,7 @@
   vars_files:
     - 'env.yml'
   vars:
-    corpPath: '{{ lookup( "pipe", "pwd" ) | regex_replace( "^(.*)/ansible/pbs/.*", "\1/com/naviextras" ) }}'
+    corpPath: '{{ lookup( "pipe", "pwd" ) | regex_replace( "^(.*)/ansible/pbs/.*", "\1/hu/linuxsysadmin" ) }}'
     nodeColoc: '{{ group_names[0] }}'
 
   roles:
