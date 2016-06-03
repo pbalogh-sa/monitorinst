@@ -1,8 +1,0 @@
-define host{
-        use                     linux-ssh,generic-host
-        contact_groups          admins
-        host_name               {{ ansible_nodename }}
-        hostgroups              {{ nodeColoc }}
-        address                 {{ ansible_nodename }}
-        }
-

@@ -1,41 +1,26 @@
-# This needs to be in your server's config somewhere, probably
-# the main httpd.conf
-# NameVirtualHost *:80
-
-# This line also needs to be in your server's config.
-# LoadModule wsgi_module modules/mod_wsgi.so
-
-# You need to manually edit this file to fit your needs.
-# This configuration assumes the default installation prefix
-# of /home/{{ actinguser }}/graphite/, if you installed graphite somewhere else
-# you will need to change all the occurances of /home/{{ actinguser }}/graphite/
-# in this file to your chosen install location.
-
 <IfModule !wsgi_module.c>
     LoadModule wsgi_module modules/mod_wsgi.so
 </IfModule>
 
-# XXX You need to set this up!
-# Read http://code.google.com/p/modwsgi/wiki/ConfigurationDirectives#WSGISocketPrefix
-##WSGISocketPrefix /etc/httpd/wsgi
-WSGISocketPrefix /home/{{ actinguser }}/graphite/run/wsgi
+WSGISocketPrefix /home/{{ actinguser }}/var/run/wsgi
 
+Listen {{ portbase }}80
 <VirtualHost *:{{ portbase }}80>
         ServerName graphite
-        DocumentRoot "/home/{{ actinguser }}/graphite/webapp"
-        ErrorLog /home/{{ actinguser }}/graphite/storage/log/webapp/error.log
-        CustomLog /home/{{ actinguser }}/graphite/storage/log/webapp/access.log common
+        DocumentRoot "/home/{{ actinguser }}/app/graphite/webapp"
+        ErrorLog /home/{{ actinguser }}/var/log/graphite_error.log
+        CustomLog /home/{{ actinguser }}/var/log/graphite_access.log common
 
         # I've found that an equal number of processes & threads tends
         # to show the best performance for Graphite (ymmv).
-        WSGIDaemonProcess graphite processes=5 threads=5 display-name='%{GROUP}' inactivity-timeout=120
+        WSGIDaemonProcess graphite processes=5 threads=5 display-name='%{GROUP}' inactivity-timeout=120 user=www-data
         WSGIProcessGroup graphite
         WSGIApplicationGroup %{GLOBAL}
-        WSGIImportScript /home/{{ actinguser }}/graphite/conf/graphite.wsgi process-group=graphite application-group=%{GLOBAL}
+        WSGIImportScript /home/{{ actinguser }}/app/graphite/conf/graphite.wsgi process-group=graphite application-group=%{GLOBAL}
 
         # XXX You will need to create this file! There is a graphite.wsgi.example
         # file in this directory that you can safely use, just copy it to graphite.wgsi
-        WSGIScriptAlias / /home/{{ actinguser }}/graphite/conf/graphite.wsgi 
+        WSGIScriptAlias / /home/{{ actinguser }}/app/graphite/conf/graphite.wsgi
 
         # XXX To serve static files, either:
         # django-admin.py collectstatic --noinput --settings=graphite.settings
@@ -44,9 +29,9 @@ WSGISocketPrefix /home/{{ actinguser }}/graphite/run/wsgi
         # * Collect static files in a directory by running:
         #     django-admin.py collectstatic --noinput --settings=graphite.settings
         #   And set an alias to serve static files with Apache:
-        Alias /content/ /home/{{ actinguser }}/graphite/webapp/content/
+        Alias /content/ /home/{{ actinguser }}/app/graphite/webapp/content/
         <Location "/content/">
-		    Require all granted
+        Require all granted
             SetHandler None
         </Location>
 
@@ -56,14 +41,14 @@ WSGISocketPrefix /home/{{ actinguser }}/graphite/run/wsgi
         # /usr/lib/python2.6/site-packages/django
         Alias /media/ "@DJANGO_ROOT@/contrib/{{ actinguser }}/media/"
         <Location "/media/">
-		    SetHandler None
+        SetHandler None
         </Location>
 
         # The graphite.wsgi file has to be accessible by apache. It won't
         # be visible to clients because of the DocumentRoot though.
-        <Directory /home/{{ actinguser }}/graphite/conf/>
- 	        Options  +FollowSymLinks
-		    Require all granted
+        <Directory /home/{{ actinguser }}/app/graphite/conf/>
+           Options  +FollowSymLinks
+        Require all granted
         </Directory>
 
 </VirtualHost>

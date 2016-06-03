@@ -1,0 +1,39 @@
+---
+- debug: var=ansible_nodename
+- debug: var=nodeColoc
+- debug: var=actinguser
+- debug: var=corpPath
+#- apt: update_cache=yes
+
+- name: Create mars dirs
+  debug: msg="Create mars dirs"
+- file: path=/home/{{ actinguser }}/app state=directory
+  become: yes
+- file: path=/home/{{ actinguser }}/etc/mars state=directory
+  become: yes
+- local_action: file path={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/{{ item }}/mars state=directory
+  with_items:
+    - etc
+    - bin
+
+- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/{{ item }} cvs add mars
+  with_items:
+    - etc
+    - bin
+  tags:
+    - cvscommit
+    - cvsadd
+  ignore_errors: yes
+
+- file: path=/home/{{ actinguser }}/var/{{ item }} state=directory
+  with_items:
+    - log
+    - run
+    - lib
+  become: yes
+
+- stat: path=/home/{{ actinguser }}/app/graphite
+  register: graphiteExist
+
+- stat: path=/home/{{ actinguser }}/app/shinken
+  register: shinkenExist
