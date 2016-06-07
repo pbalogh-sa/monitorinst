@@ -1,0 +1,10 @@
+<Component Thruk::Backend>
+    <peer>
+        name      = shinken 1
+        id        = shinken1
+        type      = livestatus
+        <options>
+            peer  = localhost:9750
+        </options>
+    </peer>
+</Component>

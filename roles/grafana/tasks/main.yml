@@ -1,0 +1,56 @@
+- name: Install grafana
+  debug: msg="Install grafana"
+
+- file: path=/home/{{ actinguser }}/etc/mars/grafana state=directory
+  become: yes
+
+- get_url: url="https://grafanarel.s3.amazonaws.com/builds/grafana-3.0.4-1464167696.linux-x64.tar.gz" dest=/home/{{ actinguser }}/tmp/grafana.tar.gz
+  become: yes
+
+- command: tar -xf /home/{{ actinguser }}/tmp/grafana.tar.gz -C /home/{{ actinguser }}/app
+  become: yes
+
+- command: creates="/home/{{ actinguser }}/app/grafana" mv /home/{{ actinguser }}/app/grafana-3.0.4-1464167696 /home/{{ actinguser }}/app/grafana
+  become: yes
+
+- command: creates="/home/{{ actinguser }}/etc/mars/grafana/defaults.ini" mv /home/{{ actinguser }}/app/grafana/conf/defaults.ini /home/{{ actinguser }}/etc/mars/grafana/defaults.ini
+  become: yes
+
+- file: src=/home/{{ actinguser }}/etc/mars/grafana/defaults.ini dest=/home/{{ actinguser }}/app/grafana/conf/defaults.ini state=link
+  become: yes
+
+- synchronize: src=/home/{{ actinguser }}/etc/mars/grafana dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/ mode=pull
+
+- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs add {{ item }}
+  with_items:
+    - ./grafana
+    - ./grafana/defaults.ini
+  tags:
+    - cvscommit
+    - cvsadd
+  ignore_errors: yes
+
+- local_action: |
+    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs commit -m "Ansible shinken/mars
+    Initial commit" {{ item }}
+  with_items:
+    - ./grafana/defaults.ini
+  tags:
+    - cvscommit
+
+- lineinfile: dest=/home/{{ actinguser }}/etc/mars/grafana/defaults.ini regexp='^http_port = ' line='http_port = 9700'
+  become: yes
+
+- synchronize: src=/home/{{ actinguser }}/etc/mars/grafana/defaults.ini dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/grafana/defaults.ini mode=pull
+
+- local_action: |
+    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs commit -m "Ansible shinken/mars
+    Second commit" {{ item }}
+  with_items:
+    - ./grafana/defaults.ini
+  tags:
+    - cvscommit
+    - overwrite
+
+#- name: Start grafana
+#  command: daemon -n grafana -r -- /home/{{ actinguser }}/app/grafana/bin/grafana-server -homepath /home/{{ actinguser }}/app/grafana -pidfile /home/{{ actinguser }}/var/run/grafana.pid
