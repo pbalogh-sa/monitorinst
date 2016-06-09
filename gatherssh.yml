@@ -3,51 +3,9 @@
   gather_facts: yes
   remote_user: admin
   vars:
-    corpPath: '{{ lookup( "pipe", "pwd" ) | regex_replace( "^(.*)/ansible/.*", "\1/hu/linuxsysadmin" ) }}'
+    corpPath: '{{ lookup( "pipe", "pwd" ) | regex_replace( "^(.*)/ansible/pbs/.*", "\1/com/naviextras" ) }}'
     nodeColoc: '{{ group_names[0] }}'
     mgmtnode: '{{ mgmtnode }}'
     actinguser: 'admin'
-  tasks:
-    - debug: var=ansible_nodename
-    - debug: var=nodeColoc
-    - debug: var=actinguser
-    - debug: var=corpPath
-    - debug: var=mgmtnode
-    - set_fact: mgmtColoc='{{ group_names[0] }}'
-      when: mgmtColoc is not defined
-      run_once: yes
-    - debug: var=mgmtColoc
-
-    - template: src=hostconf.j2 dest=/home/{{ actinguser }}/shinken/etc/shinken/hosts/{{ ansible_nodename }}.cfg
-      delegate_to: "{{ mgmtnode }}"
-    - template: src=hostgroups.j2 dest=/home/{{ actinguser }}/shinken/etc/shinken/hostgroups/{{ nodeColoc }}.cfg
-      delegate_to: "{{ mgmtnode }}"
-
-    - local_action: file path={{ corpPath }}/{{ mgmtColoc }}/{{ mgmtnode }}/home/{{ actinguser }}/shinken/etc/shinken/hosts state=directory
-    - local_action: file path={{ corpPath }}/{{ mgmtColoc }}/{{ mgmtnode }}/home/{{ actinguser }}/shinken/etc/shinken/hostgroups state=directory
-
-    - fetch: src=/home/{{ actinguser }}/shinken/etc/shinken/hosts/{{ ansible_nodename }}.cfg dest={{ corpPath }}/{{ mgmtColoc }}/{{ mgmtnode }}/home/{{ actinguser }}/shinken/etc/shinken/hosts/{{ ansible_nodename }}.cfg flat=yes
-      delegate_to: "{{ mgmtnode }}"
-    - fetch: src=/home/{{ actinguser }}/shinken/etc/shinken/hostgroups/{{ nodeColoc }}.cfg dest={{ corpPath }}/{{ mgmtColoc }}/{{ mgmtnode }}/home/{{ actinguser }}/shinken/etc/shinken/hostgroups/{{ nodeColoc }}.cfg flat=yes
-      delegate_to: "{{ mgmtnode }}"
-
-    - local_action: shell chdir={{ corpPath }}/{{ mgmtColoc }}/{{ mgmtnode }}/home/{{ actinguser }}/shinken/etc/shinken cvs add {{ item }}
-      with_items:
-        - ./hosts
-        - ./hostgroups
-        - ./hosts/{{ ansible_nodename }}.cfg
-        - ./hostgroups/{{ nodeColoc }}.cfg
-      tags:
-        - cvscommit
-        - cvsadd
-      ignore_errors: yes
-
-    - local_action: |
-        shell chdir={{ corpPath }}/{{ mgmtColoc }}/{{ mgmtnode }}/home/{{ actinguser }}/shinken/etc/shinken cvs commit -m "Ansible commit shinken/gatherssh
-        Add new host" {{ item }}
-      with_items:
-        - ./hosts/{{ ansible_nodename }}.cfg
-        - ./hostgroups/{{ nodeColoc }}.cfg
-      tags:
-        - cvscommit
-
+  roles:
+    - gatherssh

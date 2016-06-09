@@ -1,7 +1,8 @@
-- name: Install thruk
-  debug: msg="Install Thruk"
+- name: Install/customize thruk
+  debug: msg="Install/customize Thruk"
 
-- apt: name='{{ item }}' state=present
+- name: Apt install packages
+  apt: name='{{ item }}' state=present
   with_items:
     - phantomjs
     - libjson-perl
@@ -12,23 +13,32 @@
     - liblog-log4perl-perl
     - libmime-lite-perl
 
-- get_url: url="http://download.thruk.org/pkg/v2.08/src/thruk-2.08.tar.gz" dest=/home/{{ actinguser }}/tmp/thruk.tar.gz
+- name: Download thruk tar.gz
+  get_url: url="http://download.thruk.org/pkg/v2.08/src/thruk-2.08.tar.gz" dest=/home/{{ actinguser }}/tmp/thruk.tar.gz
   become: yes
 
-- command: tar -xf /home/{{ actinguser }}/tmp/thruk.tar.gz -C /home/{{ actinguser }}/app
+- name: Uncompress thruk tar.gz
+  command: tar -xf /home/{{ actinguser }}/tmp/thruk.tar.gz -C /home/{{ actinguser }}/app
   become: yes
 
-- command: creates="/home/{{ actinguser }}/app/thruk" mv /home/{{ actinguser }}/app/thruk-2.08 /home/{{ actinguser }}/app/thruk
+- name: Rename thruk-with-version to thruk
+  command: creates="/home/{{ actinguser }}/app/thruk" mv /home/{{ actinguser }}/app/thruk-2.08 /home/{{ actinguser }}/app/thruk
   become: yes
 
-- template: src=thruk_local.conf.template dest=/home/{{ actinguser }}/etc/mars/thruk_local.conf
+- name: Create thruk_local.conf from template
+  template: src=thruk_local.conf.template dest=/home/{{ actinguser }}/etc/mars/thruk_local.conf
 
-- file: src=/home/{{ actinguser }}/etc/mars/thruk_local.conf dest=/home/{{ actinguser }}/app/thruk/thruk_local.conf state=link
+- name: Create thruk_local.conf symlink
+  file: src=/home/{{ actinguser }}/etc/mars/thruk_local.conf dest=/home/{{ actinguser }}/app/thruk/thruk_local.conf state=link
   become: yes
 
-- synchronize: src=/home/{{ actinguser }}/etc/mars/thruk_local.conf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/thruk_local.conf mode=pull
+- name: Synchronize config file to local cfgCVS
+  synchronize: src=/home/{{ actinguser }}/etc/mars/thruk_local.conf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/thruk_local.conf mode=pull
+  tags:
+    - cvsadd
 
-- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs add {{ item }}
+- name: Add and commit config file to CVS
+  local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs add {{ item }}
   with_items:
     - ./thruk_local.conf
   tags:
@@ -45,4 +55,4 @@
     - cvscommit
 
 #- name: Start thruk
-#  command: daemon -n grafana -D /home/{{ actinguser }}/app/thruk -r -- /home/{{ actinguser }}/app/thruk/scripts/thruk_server.pl -p 9790
+#  command: daemon -n thruk -D /home/{{ actinguser }}/app/thruk -r -- /home/{{ actinguser }}/app/thruk/script/thruk_server.pl -p 9790

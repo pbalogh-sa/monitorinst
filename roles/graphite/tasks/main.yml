@@ -1,8 +1,8 @@
----
-- name: Install graphite
-  debug: msg="Install graphite"
+- name: Install/customize graphite
+  debug: msg="Install/customize graphite"
 
-- apt: name='{{ item }}' state=present
+- name: Apt install packages
+  apt: name='{{ item }}' state=present
   with_items:
     - python-cairo
     - python-django
@@ -15,31 +15,34 @@
     - python-memcache
     - python-pysqlite2
     - python-dev
-    - apache2
     - python-pip
 
-- pip: name='{{ item }}'
+- name: Pip install packages
+  pip: name='{{ item }}'
   with_items:
     - whisper
     - pytz
     - carbon
     - graphite-web
 
-- file: path=/home/{{ actinguser }}/etc/mars/graphite state=directory
+- name: Create etc/mars/graphite directory
+  file: path=/home/{{ actinguser }}/etc/mars/graphite state=directory
   become: yes
-- file: path=/home/{{ actinguser }}/bin/mars/graphite state=directory
+- name: Create bin/mars/graphite directory
+  file: path=/home/{{ actinguser }}/bin/mars/graphite state=directory
   become: yes
 
-- command: creates=/home/{{ actinguser }}/app/graphite mv /opt/graphite /home/{{ actinguser }}/app/
-- file: path=/home/{{ actinguser }}/app/graphite state=directory recurse=yes owner={{ actinguser }} group={{ actinguser }}
+- name: Copy /opt/graphite to $HOME/app/graphite
+  command: creates=/home/{{ actinguser }}/app/graphite cp -r /opt/graphite /home/{{ actinguser }}/app/
+  become: yes
 
-- command: creates=/home/{{ actinguser }}/etc/mars/graphite/{{ item }} cp /home/{{ actinguser }}/app/graphite/conf/{{ item }}.example /home/{{ actinguser }}/etc/mars/graphite/{{ item }}
+- name: Copy example configs
+  command: creates=/home/{{ actinguser }}/etc/mars/graphite/{{ item }} cp /home/{{ actinguser }}/app/graphite/conf/{{ item }}.example /home/{{ actinguser }}/etc/mars/graphite/{{ item }}
   with_items:
     - carbon.conf
     - storage-schemas.conf
     - graphite.wsgi
   become: yes
-
 - command: creates=/home/{{ actinguser }}/bin/mars/graphite/local_settings.py cp /home/{{ actinguser }}/app/graphite/webapp/graphite/local_settings.py.example /home/{{ actinguser }}/bin/mars/graphite/local_settings.py
   become: yes
 - command: creates=/home/{{ actinguser }}/bin/mars/graphite/app_settings.py cp /home/{{ actinguser }}/app/graphite/webapp/graphite/app_settings.py /home/{{ actinguser }}/bin/mars/graphite/app_settings.py
@@ -47,27 +50,27 @@
 - command: creates=/home/{{ actinguser }}/bin/mars/graphite/conf.py cp /home/{{ actinguser }}/app/graphite/lib/carbon/conf.py /home/{{ actinguser }}/bin/mars/graphite/conf.py
   become: yes
 
-- local_action: stat path={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/graphite
-  register: confExist
-- local_action: stat path={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/bin/mars/graphite
-  register: webappExist
-
-- synchronize: src=/home/{{ actinguser }}/etc/mars/graphite dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/ mode=pull
+- name: Sync files to cfgCVS
+  synchronize: src=/home/{{ actinguser }}/etc/mars/graphite dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/ mode=pull
+  tags:
+    - cvsadd
 - synchronize: src=/home/{{ actinguser }}/bin/mars/graphite dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/bin/mars/ mode=pull
+  tags:
+    - cvsadd
 
-- file: path=/home/{{ actinguser }}/app/graphite/webapp/graphite/{{ item }} state=absent
+- name: Remove settings from original path
+  file: path=/home/{{ actinguser }}/app/graphite/webapp/graphite/{{ item }} state=absent
   with_items:
     - local_settings.py
     - app_settings.py
-
 - file: path=/home/{{ actinguser }}/app/graphite/lib/carbon/conf.py state=absent
 
-- file: src=/home/{{ actinguser }}/bin/mars/graphite/{{ item }} dest=/home/{{ actinguser }}/app/graphite/webapp/graphite/{{ item }} state=link
+- name: Create settings symlinks
+  file: src=/home/{{ actinguser }}/bin/mars/graphite/{{ item }} dest=/home/{{ actinguser }}/app/graphite/webapp/graphite/{{ item }} state=link
   with_items:
     - local_settings.py
     - app_settings.py
   become: yes
-
 - file: src=/home/{{ actinguser }}/etc/mars/graphite/{{ item }} dest=/home/{{ actinguser }}/app/graphite/conf/{{ item }} state=link
   with_items:
    - carbon.conf
@@ -75,37 +78,42 @@
    - graphite.wsgi
   become: yes
 
-- command: bash -c "find /home/{{ actinguser }}/etc/mars/graphite -type f | xargs sed -i 's,/opt/graphite,/home/{{ actinguser }}/app/graphite,'"
+- name: Change path to $HOME/app/graphite  in config files
+  command: bash -c "find /home/{{ actinguser }}/etc/mars/graphite -type f | xargs sed -i 's,/opt/graphite,/home/{{ actinguser }}/app/graphite,'"
   become: yes
-
 - command: bash -c "find /home/{{ actinguser }}/bin/mars/graphite -type f | xargs sed -i 's,/opt/graphite,/home/{{ actinguser }}/app/graphite,'"
   become: yes
 
-- lineinfile: dest=/home/{{ actinguser }}/etc/mars/graphite/carbon.conf regexp='USER =' line='USER = {{ actinguser }}'
+- name: Modify config files
+  lineinfile: dest=/home/{{ actinguser }}/etc/mars/graphite/carbon.conf regexp='USER =' line='USER = {{ actinguser }}'
   become: yes
-
 - lineinfile: dest=/home/{{ actinguser }}/bin/mars/graphite/local_settings.py regexp='^TIME_ZONE = ' line='TIME_ZONE = \'Europe/Budapest\''
   become: yes
 - lineinfile: dest=/home/{{ actinguser }}/bin/mars/graphite/local_settings.py regexp='^SECRET_KEY = ' line='SECRET_KEY = \'secretkey\''
   become: yes
 
-## Set group to Apache run group and add writable permissions to group
-- file: path=/home/{{ actinguser }}/app/graphite/storage state=directory recurse=yes group='www-data' mode="g+rw"
-
 - file: path=/home/{{ actinguser }}/etc/mars/graphite/graphite.wsgi mode="a+x"
 
-- template: src=graphite.conf.template dest=/home/{{ actinguser }}/etc/mars/graphite.conf
-- synchronize: src=/home/{{ actinguser }}/etc/mars/graphite.conf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/graphite.conf mode=pull
-
-- file: src=/usr/lib/python2.7/dist-packages/django/contrib/admin/static dest=/home/{{ actinguser }}/app/graphite/static state=link
+- name: Create apache graphite.conf from template
+  template: src=graphite.htconf.template dest=/home/{{ actinguser }}/etc/mars/graphite.htconf
   become: yes
-- lineinfile: dest=/home/{{ actinguser }}/bin/mars/graphite/app_settings.py regexp='^ADMIN_MEDIA_PREFIX = ' state=absent
+
+- name: Symchronize files to cfgCVS
+  synchronize: src=/home/{{ actinguser }}/etc/mars/graphite.conf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/graphite.conf mode=pull
+  tags:
+    - cvsadd
+
+- name: Create symlink to django lib
+  file: src=/usr/lib/python2.7/dist-packages/django/contrib/admin/static dest=/home/{{ actinguser }}/app/graphite/static state=link
+  become: yes
+
+- name: Modify config files
+  lineinfile: dest=/home/{{ actinguser }}/bin/mars/graphite/app_settings.py regexp='^ADMIN_MEDIA_PREFIX = ' state=absent
   become: yes
 - lineinfile: dest=/home/{{ actinguser }}/bin/mars/graphite/app_settings.py regexp='^STATIC_ROOT = ' line='STATIC_ROOT = \'/home/{{ actinguser }}/app//graphite/static/\''
   become: yes
 - lineinfile: dest=/home/{{ actinguser }}/bin/mars/graphite/app_settings.py regexp='^STATIC_URL = ' line='STATIC_URL = \'/static/\''
   become: yes
-
 - replace: dest=/home/{{ actinguser }}/etc/mars/graphite/carbon.conf regexp='PORT = 20' replace='PORT = {{ portbase }}'
   become: yes
 - replace: dest=/home/{{ actinguser }}/etc/mars/graphite/carbon.conf regexp='PORT = 70' replace='PORT = {{ portbase }}'
@@ -118,29 +126,41 @@
 - replace: dest=/home/{{ actinguser }}/bin/mars/graphite/conf.py regexp='PORT=20' replace='PORT={{ portbase }}'
   become: yes
 
-- command: chdir=/home/{{ actinguser }}/app/graphite/webapp/graphite python manage.py syncdb --noinput
+- name: create DB for django app
+  command: chdir=/home/{{ actinguser }}/app/graphite/webapp/graphite python manage.py syncdb --noinput
   become: yes
 
-# Set group to Apache run group and add writable permissions to group
-- file: path=/home/{{ actinguser }}/app/graphite/storage state=directory recurse=yes group='www-data' mode="g+rw"
-
-- stat: path=/usr/local/etc/virtual.htconf
+- name: Include graphite.htconf in apache
+  stat: path=/usr/local/etc/virtual.htconf
   register: virtualhtconf
-
 - file: path=/usr/local/etc/virtual.htconf state=touch
   when: virtualhtconf.stat.exists == False
+- lineinfile: dest=/usr/local/etc/virtual.htconf line="Include /home/{{ actinguser }}/etc/mars/graphite.htconf"
+- lineinfile: dest=/etc/apache/apache2.conf line="Include /usr/local/etc/virtual.htconf"
 
-- lineinfile: dest=/etc/apache2/apache2.conf line="Include                 /usr/local/etc/virtual.htconf"
-- lineinfile: dest=/usr/local/etc/virtual.htconf line="Include                 /home/{{ actinguser }}/etc/mars/graphite.conf"
-
+- name: Set storage permissions due to apache (add group write permission)
+  file: path=/home/{{ actinguser }}/app/graphite/storage/index state=touch
+  become: yes
 - file: path=/home/{{ actinguser }}/app/graphite/storage state=directory recurse=yes mode="g+rw"
-- synchronize: src=/usr/local/etc/virtual.htconf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/usr/local/etc/virtual.htconf mode=pull
+  become: yes
 
-#- shell: chdir=/home/{{ actinguser }}/app/graphite ./bin/carbon-cache.py start
-#  become: yes
-#  ignore_errors: yes
-#- service: name=apache2 state=restarted
+- name: Start carbon cache
+  shell: chdir=/home/{{ actinguser }}/app/graphite ./bin/carbon-cache.py start
+  become: yes
+  ignore_errors: yes
 
+- name: Disable apache mod_python
+  command: a2dismod python
+
+- name: Restart apache
+  command: apachectl stop
+- pause: seconds=5
+- command: apachectl start
+
+- name: Synchronize configs and create initial commit
+  synchronize: src=/usr/local/etc/virtual.htconf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/usr/local/etc/virtual.htconf mode=pull
+  tags:
+    - cvsadd
 - local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/{{ item }}/mars cvs add graphite
   with_items:
     - etc
@@ -209,9 +229,16 @@
   tags:
     - cvscommit
 
-- synchronize: src=/home/{{ actinguser }}/etc/mars/graphite dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/ mode=pull
+- name: Synchronize configs and create initial commit
+  synchronize: src=/home/{{ actinguser }}/etc/mars/graphite dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/ mode=pull
+  tags:
+    - cvsadd
 - synchronize: src=/home/{{ actinguser }}/bin/mars/graphite dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/bin/mars/ mode=pull
+  tags:
+    - cvsadd
 - synchronize: src=/home/{{ actinguser }}/etc/mars/graphite.conf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/graphite.conf mode=pull
+  tags:
+    - cvsadd
 
 - local_action: |
     shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs commit -m "Ansible shinken/mars

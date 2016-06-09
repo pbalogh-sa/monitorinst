@@ -6,10 +6,12 @@
   vars_files:
     - 'env.yml'
   vars:
-    corpPath: '{{ lookup( "pipe", "pwd" ) | regex_replace( "^(.*)/ansible/pbs/.*", "\1/hu/linuxsysadmin" ) }}'
+    corpPath: '{{ lookup( "pipe", "pwd" ) | regex_replace( "^(.*)/ansible/.*", "\1/hu/linuxsysadmin" ) }}'
     nodeColoc: '{{ group_names[0] }}'
 
   roles:
     - { role: common }
     - { role: graphite, when: graphiteExist.stat.exists == False }
     - { role: shinken, when: shinkenExist.stat.exists == False }
+    - { role: grafana, when: grafanaExist.stat.exists == False }
+    - { role: thruk, when: thrukExist.stat.exists == False }

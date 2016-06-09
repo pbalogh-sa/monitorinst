@@ -13,7 +13,7 @@ Listen {{ portbase }}80
 
         # I've found that an equal number of processes & threads tends
         # to show the best performance for Graphite (ymmv).
-        WSGIDaemonProcess graphite processes=5 threads=5 display-name='%{GROUP}' inactivity-timeout=120 user=www-data
+        WSGIDaemonProcess graphite processes=5 threads=5 display-name='%{GROUP}' inactivity-timeout=120 user=admin group=admin
         WSGIProcessGroup graphite
         WSGIApplicationGroup %{GLOBAL}
         WSGIImportScript /home/{{ actinguser }}/app/graphite/conf/graphite.wsgi process-group=graphite application-group=%{GLOBAL}
