@@ -1,7 +1,6 @@
 - debug: var=ansible_nodename
 - debug: var=nodeColoc
 - debug: var=actinguser
-- debug: var=corpPath
 - debug: var=mgmtnode
 - debug: var=mgmtip
 - set_fact: mgmtColoc='{{ group_names[0] }}'
