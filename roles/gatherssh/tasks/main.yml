@@ -1,0 +1,27 @@
+- debug: var=ansible_nodename
+- debug: var=nodeColoc
+- debug: var=actinguser
+- debug: var=corpPath
+- debug: var=mgmtnode
+- set_fact: mgmtColoc='{{ group_names[0] }}'
+  when: mgmtColoc is not defined
+  run_once: yes
+- debug: var=mgmtColoc
+
+- file: path=/home/{{ actinguser }}/etc/mars/shinken/hostgroups state=directory
+  delegate_to: "{{ mgmtnode }}"
+
+- template: src=hostconf.j2 dest=/home/{{ actinguser }}/etc/mars/shinken/hosts/{{ ansible_nodename }}.cfg
+  delegate_to: "{{ mgmtnode }}"
+
+- template: src=hostgroups.j2 dest=/home/{{ actinguser }}/etc/mars/shinken/hostgroups/{{ nodeColoc }}.cfg
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+
+- file: src=/home/{{ actinguser }}/etc/mars/shinken/hosts/{{ ansible_nodename }}.cfg dest=/home/{{ actinguser }}/app/shinken/etc/shinken/hosts/{{ ansible_nodename }}.cfg state=link
+  delegate_to: "{{ mgmtnode }}"
+
+- file: src=/home/{{ actinguser }}/etc/mars/shinken/hostgroups/{{ nodeColoc }}.cfg dest=/home/{{ actinguser }}/app/shinken/etc/shinken/hostgroups/{{ nodeColoc }}.cfg state=link
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+

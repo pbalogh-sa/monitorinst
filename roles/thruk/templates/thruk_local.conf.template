@@ -4,7 +4,7 @@
         id        = shinken1
         type      = livestatus
         <options>
-            peer  = localhost:9750
+            peer  = localhost:{{ portbase }}50
         </options>
     </peer>
 </Component>

@@ -1,11 +1,12 @@
 ---
 - hosts: '{{ servers }}'
   gather_facts: yes
+  remote_user: root
   vars_files:
     - 'env.yml'
-  remote_user: '{{ actinguser }}'
+  become_user: '{{ actinguser }}'
   vars:
     nodeColoc: '{{ group_names[0] }}'
     mgmtnode: '{{ mgmtnode }}'
   roles:
-    - gatherssh
+    - nrpeconfig

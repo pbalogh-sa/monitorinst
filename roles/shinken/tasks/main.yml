@@ -28,11 +28,6 @@
 - file: src=/usr/bin dest=/home/{{ actinguser }}/app/shinken/usr/bin state=link
   become: yes
 
-- name: Create directories in local cfgCVS
-  local_action: file path={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/shinken state=directory
-  tags:
-    - cvsadd
-
 - name: Copy and create required directories to $HOME
   command: creates=/home/{{ actinguser }}/app/shinken/etc/shinken cp -r /etc/shinken /home/{{ actinguser }}/app/shinken/etc/
   become: yes
@@ -52,13 +47,9 @@
   become: yes
 
 - name: Create shinken.ini from template
-  template: src=shinken.ini.template dest=/home/{{ actinguser }}/etc/mars/shinken.ini
+  template: src=shinken.ini.j2 dest=/home/{{ actinguser }}/etc/mars/shinken.ini
   become: yes
 - file: src=/home/{{ actinguser }}/etc/mars/shinken.ini dest=/home/{{ actinguser }}/.shinken.ini state=link
-
-- synchronize: src=/home/{{ actinguser }}/etc/mars/shinken.ini dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/shinken.ini mode=pull
-  tags:
-    - cvsadd
 
 - name: Init shinken and install modules
   command: shinken --init
@@ -82,27 +73,6 @@
 - name: Move ini files to $HOME/etc/mars/shinken
   command: creates=/home/{{ actinguser }}/etc/mars/shinken/daemons mv /home/{{ actinguser }}/app/shinken/etc/shinken/daemons /home/{{ actinguser }}/etc/mars/shinken/daemons
   become: yes
-
-- name: Create required directories in local cfgCVS
-  local_action: file path='{{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/shinken/{{ item }}' state=directory
-  with_items:
-    - daemons
-    - brokers
-    - hosts
-    - modules
-    - resource.d
-    - reactionners
-    - pollers
-    - schedulers
-    - receivers
-    - arbiters
-  tags:
-    - cvsadd
-
-- name: Synchronize original ini files to local cfgCVS
-  synchronize: src=/home/{{ actinguser }}/etc/mars/shinken/daemons dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/shinken/ recursive=yes mode=pull
-  tags:
-    - cvsadd
 
 - name: Find ini files
   find: path=/home/{{ actinguser }}/etc/mars/shinken/daemons patterns=*.ini recurse=yes
@@ -145,11 +115,6 @@
 - file: src={{ item.path }} dest=/home/{{ actinguser }}/app/shinken/etc/shinken/daemons/{{ item.path|basename() }} state=link
   with_items: '{{ iniFiles.files }}'
   become: yes
-
-- name: Synchronize /etc/default/shinken
-  synchronize: src=/etc/default/shinken dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/etc/default/ mode=pull
-  tags:
-    - cvsadd
 
 - name: Modify /etc/default/shinken
   replace: dest=/etc/default/shinken regexp='=/etc/' replace='=/home/{{ actinguser }}/app/shinken/etc/'
@@ -208,12 +173,6 @@
   when: item.path|basename == "shinken.cfg"
   become: yes
 
-- name: Synchronize cfg files to local cfgCVS
-  synchronize: src={{ item.path }} dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/{{ item.path }} mode=pull
-  with_items: '{{ configFiles.files }}'
-  tags:
-    - cvsadd
-
 - name: Move specified config files to $HOME/etc/mars/shinken
   command: creates=/home/{{ actinguser }}/etc/mars/shinken/{{ item }} mv /home/{{ actinguser }}/app/shinken/etc/shinken/{{ item }} /home/{{ actinguser }}/etc/mars/shinken/{{ item }}
   with_items:
@@ -238,20 +197,6 @@
     - modules/livestatus.cfg
     - modules/ui-graphite.cfg
 
-- name: Symchronize specified config files to local cfgCVS
-  synchronize: src=/home/{{ actinguser }}/etc/mars/shinken/{{ item }} dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/shinken/{{ item }} mode=pull
-  with_items:
-    - resource.d/paths.cfg
-    - shinken.cfg
-    - brokers/broker-master.cfg
-    - hosts/localhost.cfg
-    - modules/webui2.cfg
-    - modules/graphite.cfg
-    - modules/livestatus.cfg
-    - modules/ui-graphite.cfg
-  tags:
-    - cvsadd
-
 - name: Modify cfg files
   replace: dest={{ item.path }} regexp='port *77' replace='port {{ portbase }}'
   with_items: '{{ configFiles.files }}'
@@ -274,7 +219,7 @@
   become: yes
 - replace: dest=/home/{{ actinguser }}/etc/mars/shinken/hosts/localhost.cfg regexp='^([ \t]*use[ \t]+)(generic-host)$' replace='\1linux-ssh,\2'
   become: yes
-- template: src=webui2.conf.template dest=/home/{{ actinguser }}/etc/mars/shinken/modules/webui2.cfg
+- template: src=webui2.conf.j2 dest=/home/{{ actinguser }}/etc/mars/shinken/modules/webui2.cfg
   become: yes
 - replace: dest=/home/{{ actinguser }}/etc/mars/shinken/modules/graphite.cfg regexp='port *20' replace='port {{ portbase }}'
   become: yes
@@ -285,87 +230,3 @@
 - replace: dest=/home/{{ actinguser }}/etc/mars/shinken/modules/ui-graphite.cfg regexp='templates_path[ \t]*/var/' replace='templates_path /home/{{ actinguser }}/shinken/var/'
   become: yes
 
-- name: Add and commit original files to CVS
-  local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs add shinken
-  tags:
-    - cvscommit
-    - cvsadd
-
-- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/shinken/ cvs add {{ item }}
-  with_items:
-    - daemons
-    - brokers
-    - hosts
-    - modules
-    - resource.d
-    - reactionners
-    - pollers
-    - schedulers
-    - receivers
-    - arbiters
-  tags:
-    - cvscommit
-    - cvsadd
-
-- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/shinken find . \( -type d -name CVS -prune \) -o \( -type f -exec cvs add '{}' \; \)
-  tags:
-    - cvscommit
-    - cvsadd
-
-- local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/shinken cvs commit -m "Ansible shinken/mars
-    Initial commit"
-  tags:
-    - cvscommit
-
-- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs add {{ item }}
-  with_items:
-    - ./etc/default/shinken
-  tags:
-    - cvscommit
-    - cvsadd
-  ignore_errors: yes
-
-- local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "Ansible shinken/mars
-    Initial commit" ./etc/default/shinken
-  tags:
-    - cvscommit
-
-- name: Synchronize modified files to local cfgCVS
-  synchronize: src={{ item.path }} dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/{{ item.path }} mode=pull
-  with_items: '{{ configFiles.files }}'
-  tags:
-    - cvsadd
-
-- synchronize: src=/home/{{ actinguser }}/etc/mars/shinken/{{ item }} dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/shinken/{{ item }} mode=pull
-  with_items:
-    - resource.d/paths.cfg
-    - shinken.cfg
-    - brokers/broker-master.cfg
-    - hosts/localhost.cfg
-    - modules/webui2.cfg
-    - modules/graphite.cfg
-    - modules/livestatus.cfg
-    - modules/ui-graphite.cfg
-  tags:
-    - cvsadd
-
-- synchronize: src=/etc/default/shinken dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/etc/default/ mode=pull
-  tags:
-    - cvsadd
-
-- name: Commit modified files to CVS
-  local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/shinken cvs commit -m "Ansible shinken/mars
-    Second commit"
-  tags:
-    - cvscommit
-    - overwrite
-
-- local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }} cvs commit -m "Ansible shinken/mars
-    Second commit" ./etc/default/shinken
-  tags:
-    - cvscommit
-    - overwrite

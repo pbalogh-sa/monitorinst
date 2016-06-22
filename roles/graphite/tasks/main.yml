@@ -50,14 +50,6 @@
 - command: creates=/home/{{ actinguser }}/bin/mars/graphite/conf.py cp /home/{{ actinguser }}/app/graphite/lib/carbon/conf.py /home/{{ actinguser }}/bin/mars/graphite/conf.py
   become: yes
 
-- name: Sync files to cfgCVS
-  synchronize: src=/home/{{ actinguser }}/etc/mars/graphite dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/ mode=pull
-  tags:
-    - cvsadd
-- synchronize: src=/home/{{ actinguser }}/bin/mars/graphite dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/bin/mars/ mode=pull
-  tags:
-    - cvsadd
-
 - name: Remove settings from original path
   file: path=/home/{{ actinguser }}/app/graphite/webapp/graphite/{{ item }} state=absent
   with_items:
@@ -95,13 +87,8 @@
 - file: path=/home/{{ actinguser }}/etc/mars/graphite/graphite.wsgi mode="a+x"
 
 - name: Create apache graphite.conf from template
-  template: src=graphite.htconf.template dest=/home/{{ actinguser }}/etc/mars/graphite.htconf
+  template: src=graphite.htconf.j2 dest=/home/{{ actinguser }}/etc/mars/graphite.htconf
   become: yes
-
-- name: Symchronize files to cfgCVS
-  synchronize: src=/home/{{ actinguser }}/etc/mars/graphite.conf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/graphite.conf mode=pull
-  tags:
-    - cvsadd
 
 - name: Create symlink to django lib
   file: src=/usr/lib/python2.7/dist-packages/django/contrib/admin/static dest=/home/{{ actinguser }}/app/graphite/static state=link
@@ -136,7 +123,7 @@
 - file: path=/usr/local/etc/virtual.htconf state=touch
   when: virtualhtconf.stat.exists == False
 - lineinfile: dest=/usr/local/etc/virtual.htconf line="Include /home/{{ actinguser }}/etc/mars/graphite.htconf"
-- lineinfile: dest=/etc/apache/apache2.conf line="Include /usr/local/etc/virtual.htconf"
+- lineinfile: dest=/etc/apache2/apache2.conf line="Include /usr/local/etc/virtual.htconf"
 
 - name: Set storage permissions due to apache (add group write permission)
   file: path=/home/{{ actinguser }}/app/graphite/storage/index state=touch
@@ -157,108 +144,3 @@
 - pause: seconds=5
 - command: apachectl start
 
-- name: Synchronize configs and create initial commit
-  synchronize: src=/usr/local/etc/virtual.htconf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/usr/local/etc/virtual.htconf mode=pull
-  tags:
-    - cvsadd
-- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/{{ item }}/mars cvs add graphite
-  with_items:
-    - etc
-    - bin
-  tags:
-    - cvscommit
-    - cvsadd
-  ignore_errors: yes
-
-- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/graphite cvs add {{ item }}
-  with_items:
-    - carbon.conf
-    - graphite.wsgi
-    - storage-schemas.conf
-  tags:
-    - cvscommit
-    - cvsadd
-  ignore_errors: yes
-
-- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/bin/mars/graphite cvs add {{ item }}
-  with_items:
-    - local_settings.py
-    - app_settings.py
-    - conf.py
-  tags:
-    - cvscommit
-    - cvsadd
-  ignore_errors: yes
-
-- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs add graphite.conf
-  tags:
-    - cvscommit
-    - cvsadd
-  ignore_errors: yes
-
-- local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs commit -m "Ansible shinken/mars
-    Initial commit" {{ item }}
-  with_items:
-    - ./graphite.conf
-    - ./graphite/carbon.conf
-    - ./graphite/graphite.wsgi
-    - ./graphite/storage-schemas.conf
-  tags:
-    - cvscommit
-
-- local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/bin/mars/graphite cvs commit -m "Ansible shinken/mars
-    Initial commit" {{ item }}
-  with_items:
-  - local_settings.py
-  - app_settings.py
-  - conf.py
-  tags:
-    - cvscommit
-
-- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/usr/local/etc cvs add virtual.htconf
-  tags:
-    - cvscommit
-    - cvsadd
-  ignore_errors: yes
-
-- local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/usr/local/etc cvs commit -m "Ansible shinken/mars
-    add graphite config" virtual.htconf
-  tags:
-    - cvscommit
-
-- name: Synchronize configs and create initial commit
-  synchronize: src=/home/{{ actinguser }}/etc/mars/graphite dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/ mode=pull
-  tags:
-    - cvsadd
-- synchronize: src=/home/{{ actinguser }}/bin/mars/graphite dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/bin/mars/ mode=pull
-  tags:
-    - cvsadd
-- synchronize: src=/home/{{ actinguser }}/etc/mars/graphite.conf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/graphite.conf mode=pull
-  tags:
-    - cvsadd
-
-- local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs commit -m "Ansible shinken/mars
-    Second commit" {{ item }}
-  with_items:
-    - ./graphite.conf
-    - ./graphite/carbon.conf
-    - ./graphite/graphite.wsgi
-    - ./graphite/storage-schemas.conf
-  tags:
-    - cvscommit
-    - overwrite
-
-- local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/bin/mars/graphite cvs commit -m "Ansible shinken/mars
-    Second commit" {{ item }}
-  with_items:
-  - local_settings.py
-  - app_settings.py
-  - conf.py
-  tags:
-    - cvscommit
-    - overwrite

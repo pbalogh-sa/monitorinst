@@ -1,0 +1,88 @@
+- debug: var=ansible_nodename
+- debug: var=nodeColoc
+- debug: var=actinguser
+- debug: var=corpPath
+- debug: var=mgmtnode
+- debug: var=mgmtip
+- set_fact: mgmtColoc='{{ group_names[0] }}'
+  when: mgmtColoc is not defined
+  run_once: yes
+- debug: var=mgmtColoc
+
+- command: shinken install booster-nrpe
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+  become: yes
+
+- file: path=/home/{{ actinguser }}/etc/mars/shinken/{{ item }} state=directory
+  with_items:
+    - packs
+    - commands
+    - hosts
+    - hostgroups
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+  become: yes
+
+- copy: src={{ item }} dest=/home/{{ actinguser }}/etc/mars/shinken/packs/
+  with_items:
+    - nrpe
+    - linux-nrpe
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+  become: yes
+
+- file: src=/home/{{ actinguser }}/etc/mars/shinken/packs/{{ item }} dest=/home/{{ actinguser }}/app/shinken/etc/shinken/packs/{{ item }} state=link
+  with_items:
+    - nrpe
+    - linux-nrpe
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+  become: yes
+
+
+- template: src=hostconf.j2 dest=/home/{{ actinguser }}/etc/mars/shinken/hosts/{{ ansible_nodename }}.cfg
+  delegate_to: "{{ mgmtnode }}"
+  become: yes
+
+- template: src=hostgroups.j2 dest=/home/{{ actinguser }}/etc/mars/shinken/hostgroups/{{ nodeColoc }}.cfg
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+  become: yes
+
+- file: src=/home/{{ actinguser }}/etc/mars/shinken/hosts/{{ ansible_nodename }}.cfg dest=/home/{{ actinguser }}/app/shinken/etc/shinken/hosts/{{ ansible_nodename }}.cfg state=link
+  delegate_to: "{{ mgmtnode }}"
+  become: yes
+
+
+- file: src=/home/{{ actinguser }}/etc/mars/shinken/hostgroups/{{ nodeColoc }}.cfg dest=/home/{{ actinguser }}/app/shinken/etc/shinken/hostgroups/{{ nodeColoc }}.cfg state=link
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+  become: yes
+
+- command: creates=/home/{{ actinguser }}/etc/mars/shinken/{{ item }} mv  /home/{{ actinguser }}/app/shinken/etc/shinken/{{ item }} /home/{{ actinguser }}/etc/mars/shinken/{{ item }}
+  with_items:
+    - ./commands/check_nrpe.cfg
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+  become: yes
+
+- file: src=/home/{{ actinguser }}/etc/mars/shinken/commands/check_nrpe.cfg dest=/home/{{ actinguser }}/app/shinken/etc/shinken/commands/check_nrpe.cfg state=link
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+  become: yes
+
+- replace: dest=/home/{{ actinguser }}/etc/mars/shinken/pollers/poller-master.cfg regexp='^([ \t]*modules[ \t]*)$' replace='\1 booster-nrpe'
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+  become: yes
+
+- lineinfile: dest=/home/{{ actinguser }}/etc/mars/shinken/commands/check_nrpe.cfg line="    module_type    nrpe_poller" insertbefore="}"
+  delegate_to: "{{ mgmtnode }}"
+  run_once: True
+  become: yes
+
+- lineinfile: dest=/etc/nagios/nrpe_local.cfg line="allowed_hosts=127.0.0.1,{{ mgmtip }}"
+
+- service: name=nagios-nrpe-server state=restarted
+

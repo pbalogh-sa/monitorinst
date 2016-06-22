@@ -3,7 +3,7 @@
 - debug: var=nodeColoc
 - debug: var=actinguser
 - debug: var=corpPath
-#- apt: update_cache=yes
+- apt: update_cache=yes
 
 - name: Create mars dirs
   debug: msg="Create mars dirs"
@@ -11,19 +11,6 @@
   become: yes
 - file: path=/home/{{ actinguser }}/etc/mars state=directory
   become: yes
-- local_action: file path={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/{{ item }}/mars state=directory
-  with_items:
-    - etc
-    - bin
-
-- local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/{{ item }} cvs add mars
-  with_items:
-    - etc
-    - bin
-  tags:
-    - cvscommit
-    - cvsadd
-  ignore_errors: yes
 
 - file: path=/home/{{ actinguser }}/var/{{ item }} state=directory
   with_items:
@@ -37,3 +24,10 @@
 
 - stat: path=/home/{{ actinguser }}/app/shinken
   register: shinkenExist
+
+- stat: path=/home/{{ actinguser }}/app/thruk
+  register: thrukExist
+
+- stat: path=/home/{{ actinguser }}/app/grafana
+  register: grafanaExist
+

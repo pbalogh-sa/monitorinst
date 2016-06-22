@@ -2,11 +2,10 @@
 - hosts: '{{ server }}'
   gather_facts: yes
   remote_user: root
-  become_user: admin
   vars_files:
     - 'env.yml'
+  become_user: '{{ actinguser }}'
   vars:
-    corpPath: '{{ lookup( "pipe", "pwd" ) | regex_replace( "^(.*)/ansible/.*", "\1/hu/linuxsysadmin" ) }}'
     nodeColoc: '{{ group_names[0] }}'
 
   roles:

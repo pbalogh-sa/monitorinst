@@ -25,47 +25,9 @@
   file: src=/home/{{ actinguser }}/etc/mars/grafana/defaults.ini dest=/home/{{ actinguser }}/app/grafana/conf/defaults.ini state=link
   become: yes
 
-- name: Synchronize initial ini file to local cfgCVS directiry
-  synchronize: src=/home/{{ actinguser }}/etc/mars/grafana dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/ mode=pull
-  tags:
-    - cvsadd
-
-- name: Add and initial commit ini file to CVS
-  local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs add {{ item }}
-  with_items:
-    - ./grafana
-    - ./grafana/defaults.ini
-  tags:
-    - cvscommit
-    - cvsadd
-  ignore_errors: yes
-
-- local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs commit -m "Ansible shinken/mars
-    Initial commit" {{ item }}
-  with_items:
-    - ./grafana/defaults.ini
-  tags:
-    - cvscommit
-
 - name: Costumize defaults.ini
   lineinfile: dest=/home/{{ actinguser }}/etc/mars/grafana/defaults.ini regexp='^http_port = ' line='http_port = 9700'
   become: yes
 
-- name: Synchronize ini file to local cfgCVS
-  synchronize: src=/home/{{ actinguser }}/etc/mars/grafana/defaults.ini dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/grafana/defaults.ini mode=pull
-  tags:
-    - cvsadd
-
-- name: Commit modified ini file to CVS
-  local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs commit -m "Ansible shinken/mars
-    Second commit" {{ item }}
-  with_items:
-    - ./grafana/defaults.ini
-  tags:
-    - cvscommit
-    - overwrite
-
-#- name: Start grafana
-#  command: daemon -n grafana -r -- /home/{{ actinguser }}/app/grafana/bin/grafana-server -homepath /home/{{ actinguser }}/app/grafana -pidfile /home/{{ actinguser }}/var/run/grafana.pid
+- name: Start grafana
+  command: daemon -n grafana -r -- /home/{{ actinguser }}/app/grafana/bin/grafana-server -homepath /home/{{ actinguser }}/app/grafana -pidfile /home/{{ actinguser }}/var/run/grafana.pid

@@ -32,27 +32,5 @@
   file: src=/home/{{ actinguser }}/etc/mars/thruk_local.conf dest=/home/{{ actinguser }}/app/thruk/thruk_local.conf state=link
   become: yes
 
-- name: Synchronize config file to local cfgCVS
-  synchronize: src=/home/{{ actinguser }}/etc/mars/thruk_local.conf dest={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars/thruk_local.conf mode=pull
-  tags:
-    - cvsadd
-
-- name: Add and commit config file to CVS
-  local_action: shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs add {{ item }}
-  with_items:
-    - ./thruk_local.conf
-  tags:
-    - cvscommit
-    - cvsadd
-  ignore_errors: yes
-
-- local_action: |
-    shell chdir={{ corpPath }}/{{ nodeColoc }}/{{ ansible_nodename }}/home/{{ actinguser }}/etc/mars cvs commit -m "Ansible shinken/mars
-    Initial commit" {{ item }}
-  with_items:
-    - ./thruk_local.conf
-  tags:
-    - cvscommit
-
-#- name: Start thruk
-#  command: daemon -n thruk -D /home/{{ actinguser }}/app/thruk -r -- /home/{{ actinguser }}/app/thruk/script/thruk_server.pl -p 9790
+- name: Start thruk
+  command: daemon -n thruk -D /home/{{ actinguser }}/app/thruk -r -- /home/{{ actinguser }}/app/thruk/script/thruk_server.pl -p 9790
