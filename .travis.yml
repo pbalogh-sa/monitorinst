@@ -8,4 +8,6 @@ install:
   - pip install ansible
 
 script:
-- ansible-playbook --extra-vars "server=shinken" --syntax-check -i hosts.ini mars.yml
+  - ansible-playbook --extra-vars "server=shinken" --syntax-check -i hosts.ini mars.yml
+  - ansible-playbook --extra-vars "servers=one,two mgmtnode=shinken mgmtip=192.168.122.78" --syntax-check -i hosts.ini gatherssh.yml
+  - ansible-playbook --extra-vars "servers=one,two mgmtnode=shinken mgmtip=192.168.122.78" --syntax-check -i hosts.ini nrpeconfiga.yml
