@@ -1,5 +1,7 @@
 # monitorinst
 
+##### Playbook of monitoring, alerting and reporting tools
+
 [![Build Status](https://travis-ci.org/pbalogh-sa/monitorinst.svg?branch=master)](https://travis-ci.org/pbalogh-sa/monitorinst)
 
 - Install Shinken, graphite, grafana and thruk
